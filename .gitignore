@@ -77,3 +77,6 @@ htmlcov/
 # Temporary files
 tmp/
 temp/
+
+# Vercel deployment
+.vercel
