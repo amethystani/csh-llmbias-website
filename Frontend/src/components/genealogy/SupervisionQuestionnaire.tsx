@@ -169,10 +169,10 @@ export const SupervisionQuestionnaire: React.FC<SupervisionQuestionnaireProps> =
   // Show loading state when generating questions
   if (isLoading) {
     return (
-      <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-3 border-emerald-500"></div>
-          <span className="ml-4 text-slate-700 text-lg font-medium">Generating questions for {selectedProfessor.name}...</span>
+      <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6 sm:p-8">
+        <div className="flex flex-col sm:flex-row items-center justify-center py-8 sm:py-12 gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-3 border-emerald-500"></div>
+          <span className="text-slate-700 text-base sm:text-lg font-medium text-center">Generating questions for {selectedProfessor.name}...</span>
         </div>
       </div>
     );
@@ -181,16 +181,16 @@ export const SupervisionQuestionnaire: React.FC<SupervisionQuestionnaireProps> =
   // Show completion state
   if (!currentPair || questionPairs.length === 0) {
     return (
-      <div className="bg-gradient-to-br from-emerald-50/90 to-blue-50/90 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 p-10">
-        <div className="text-center py-8">
-          <div className="bg-white/60 backdrop-blur-sm rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-14 h-14 text-emerald-600" />
+      <div className="bg-gradient-to-br from-emerald-50/90 to-blue-50/90 backdrop-blur-lg rounded-2xl shadow-xl border border-white/30 p-6 sm:p-8 lg:p-10">
+        <div className="text-center py-6 sm:py-8">
+          <div className="bg-white/60 backdrop-blur-sm rounded-full w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center mx-auto mb-4 sm:mb-6">
+            <CheckCircle className="w-12 h-12 sm:w-14 sm:h-14 text-emerald-600" />
           </div>
-          <h3 className="text-2xl font-bold text-slate-800 mb-3">Assessment Complete!</h3>
-          <p className="text-slate-700 text-lg mb-6">All supervision relationships for <span className="font-semibold text-emerald-700">{selectedProfessor.name}</span> have been assessed.</p>
+          <h3 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3">Assessment Complete!</h3>
+          <p className="text-slate-700 text-base sm:text-lg mb-6">All supervision relationships for <span className="font-semibold text-emerald-700">{selectedProfessor.name}</span> have been assessed.</p>
           <button
             onClick={onClearSelection}
-            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-8 py-4 rounded-2xl text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+            className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 w-full sm:w-auto"
           >
             Select Another Scientist
           </button>
@@ -201,20 +201,20 @@ export const SupervisionQuestionnaire: React.FC<SupervisionQuestionnaireProps> =
 
   // Show assessment questions
   return (
-    <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
-      <div className="mb-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
+    <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6 sm:p-8">
+      <div className="mb-6 sm:mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4 sm:mb-6">
           <div className="mb-4 lg:mb-0">
-            <h3 className="text-2xl font-bold text-slate-800 mb-2">
+            <h3 className="text-xl sm:text-2xl font-bold text-slate-800 mb-2">
               Assessment Questions
             </h3>
-            <p className="text-lg text-slate-700">
-              Assessing relationships for: <span className="font-bold text-emerald-700 bg-emerald-100/50 px-3 py-1 rounded-full">{selectedProfessor.name}</span>
+            <p className="text-base sm:text-lg text-slate-700">
+              Assessing relationships for: <span className="font-bold text-emerald-700 bg-emerald-100/50 px-2 sm:px-3 py-1 rounded-full">{selectedProfessor.name}</span>
             </p>
           </div>
-          <div className="text-right">
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl px-4 py-3 mb-2">
-              <span className="text-lg font-semibold text-slate-700">
+          <div className="text-left lg:text-right">
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl px-3 sm:px-4 py-2 sm:py-3 mb-2">
+              <span className="text-base sm:text-lg font-semibold text-slate-700">
                 Question {currentQuestionIndex + 1} of {questionPairs.length}
               </span>
             </div>
@@ -235,73 +235,73 @@ export const SupervisionQuestionnaire: React.FC<SupervisionQuestionnaireProps> =
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-slate-50/80 to-white/80 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-white/30">
-        <div className="flex items-center justify-center mb-8">
-          <div className="bg-white/60 backdrop-blur-sm rounded-full p-3 mr-4">
-            <Users className="w-10 h-10 text-slate-700" />
+      <div className="bg-gradient-to-br from-slate-50/80 to-white/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 mb-6 sm:mb-8 border border-white/30">
+        <div className="flex flex-col sm:flex-row items-center justify-center mb-6 sm:mb-8 gap-4">
+          <div className="bg-white/60 backdrop-blur-sm rounded-full p-3">
+            <Users className="w-8 h-8 sm:w-10 sm:h-10 text-slate-700" />
           </div>
-          <h4 className="text-2xl font-bold text-slate-800 text-center">
+          <h4 className="text-xl sm:text-2xl font-bold text-slate-800 text-center">
             What is the supervision relationship between these individuals?
           </h4>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 mb-10">
+        <div className="grid gap-6 lg:grid-cols-2 lg:gap-8 mb-8 sm:mb-10">
           <div className="text-center">
-            <div className="bg-gradient-to-br from-blue-100/80 to-blue-200/60 backdrop-blur-sm rounded-2xl p-8 border border-blue-200/50 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="bg-white/70 backdrop-blur-sm rounded-full px-6 py-2 mb-4 inline-block">
-                <h5 className="font-bold text-blue-800 text-xl">Person A</h5>
+            <div className="bg-gradient-to-br from-blue-100/80 to-blue-200/60 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-blue-200/50 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="bg-white/70 backdrop-blur-sm rounded-full px-4 sm:px-6 py-2 mb-4 inline-block">
+                <h5 className="font-bold text-blue-800 text-lg sm:text-xl">Person A</h5>
               </div>
-              <p className="text-blue-900 font-bold text-2xl">{currentPair[0].name}</p>
+              <p className="text-blue-900 font-bold text-xl sm:text-2xl">{currentPair[0].name}</p>
             </div>
           </div>
           
           <div className="text-center">
-            <div className="bg-gradient-to-br from-emerald-100/80 to-emerald-200/60 backdrop-blur-sm rounded-2xl p-8 border border-emerald-200/50 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="bg-white/70 backdrop-blur-sm rounded-full px-6 py-2 mb-4 inline-block">
-                <h5 className="font-bold text-emerald-800 text-xl">Person B</h5>
+            <div className="bg-gradient-to-br from-emerald-100/80 to-emerald-200/60 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-emerald-200/50 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="bg-white/70 backdrop-blur-sm rounded-full px-4 sm:px-6 py-2 mb-4 inline-block">
+                <h5 className="font-bold text-emerald-800 text-lg sm:text-xl">Person B</h5>
               </div>
-              <p className="text-emerald-900 font-bold text-2xl">{currentPair[1].name}</p>
+              <p className="text-emerald-900 font-bold text-xl sm:text-2xl">{currentPair[1].name}</p>
             </div>
           </div>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-4 sm:space-y-5">
           <button
             onClick={() => handleAnswer('A_supervises_B')}
-            className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-6 px-8 rounded-2xl transition-all duration-300 text-left text-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] border border-emerald-400/30"
+            className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-5 sm:py-6 px-6 sm:px-8 rounded-2xl transition-all duration-300 text-left text-lg sm:text-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] border border-emerald-400/30 touch-manipulation"
           >
             <div className="flex items-center justify-between">
-              <span>
+              <span className="flex-1 pr-4">
                 <span className="font-bold text-emerald-100">{currentPair[0].name}</span> supervises <span className="font-bold text-emerald-100">{currentPair[1].name}</span>
               </span>
               <div className="bg-white/20 rounded-full p-2">
-                <span className="text-2xl">→</span>
+                <span className="text-xl sm:text-2xl">→</span>
               </div>
             </div>
           </button>
           
           <button
             onClick={() => handleAnswer('B_supervises_A')}
-            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-6 px-8 rounded-2xl transition-all duration-300 text-left text-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] border border-blue-400/30"
+            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-5 sm:py-6 px-6 sm:px-8 rounded-2xl transition-all duration-300 text-left text-lg sm:text-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] border border-blue-400/30 touch-manipulation"
           >
             <div className="flex items-center justify-between">
-              <span>
+              <span className="flex-1 pr-4">
                 <span className="font-bold text-blue-100">{currentPair[1].name}</span> supervises <span className="font-bold text-blue-100">{currentPair[0].name}</span>
               </span>
               <div className="bg-white/20 rounded-full p-2">
-                <span className="text-2xl">→</span>
+                <span className="text-xl sm:text-2xl">→</span>
               </div>
             </div>
           </button>
           
           <button
             onClick={() => handleAnswer('no_relationship')}
-            className="w-full bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white py-6 px-8 rounded-2xl transition-all duration-300 text-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] border border-slate-400/30"
+            className="w-full bg-gradient-to-r from-slate-500 to-slate-600 hover:from-slate-600 hover:to-slate-700 text-white py-5 sm:py-6 px-6 sm:px-8 rounded-2xl transition-all duration-300 text-lg sm:text-xl font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] border border-slate-400/30 touch-manipulation"
           >
             <div className="flex items-center justify-between">
-              <span>No supervision relationship exists</span>
+              <span className="flex-1 pr-4">No supervision relationship exists</span>
               <div className="bg-white/20 rounded-full p-2">
-                <span className="text-2xl">✕</span>
+                <span className="text-xl sm:text-2xl">✕</span>
               </div>
             </div>
           </button>
