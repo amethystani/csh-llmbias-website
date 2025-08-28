@@ -18,6 +18,37 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
   const [filteredScientists, setFilteredScientists] = useState<Scientist[]>([]);
   const [biographyType, setBiographyType] = useState<'minimal' | 'comprehensive'>('minimal');
 
+  // Simple model anonymization with initials for unbiased research
+  const getAnonymizedModelName = (modelName: string): string => {
+    // Create a simple mapping based on model keywords
+    const getInitial = (name: string): string => {
+      const lowerName = name.toLowerCase();
+      
+      // Check for specific model patterns and assign consistent initials
+      if (lowerName.includes('deepseek')) return 'D';
+      if (lowerName.includes('gpt') || lowerName.includes('davinci')) return 'G';
+      if (lowerName.includes('qwen')) return 'Q';
+      if (lowerName.includes('gemma')) return 'M';
+      if (lowerName.includes('claude')) return 'C';
+      if (lowerName.includes('gemini') || lowerName.includes('bard')) return 'E';
+      if (lowerName.includes('llama')) return 'L';
+      if (lowerName.includes('mistral') || lowerName.includes('mixtral')) return 'X';
+      if (lowerName.includes('cohere')) return 'H';
+      if (lowerName.includes('palm')) return 'P';
+      if (lowerName.includes('yi-')) return 'Y';
+      
+      // For unknown models, use first letter of the name
+      return name.charAt(0).toUpperCase();
+    };
+    
+    return `Bio-${getInitial(modelName)}`;
+  };
+
+  // Get display name for dropdown 
+  const getDisplayModelName = (modelName: string): string => {
+    return getAnonymizedModelName(modelName);
+  };
+
   // Load scientists and models from API
   useEffect(() => {
     const loadData = async () => {
@@ -37,7 +68,13 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
           const modelsData = await modelsResponse.json();
           if (modelsData.success && modelsData.models) {
             setAvailableModels(modelsData.models);
-            // Don't auto-select a model, let user choose
+            
+            // Console log for internal reference (development only)
+            console.group('🔍 Model Anonymization Mapping (Internal Reference)');
+            modelsData.models.forEach((model: string) => {
+              console.log(`${getDisplayModelName(model)} -> ${model}`);
+            });
+            console.groupEnd();
           }
         }
       } catch (error) {
@@ -278,7 +315,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
               >
                 <option value="">Select a model...</option>
                 {availableModels.map((model) => (
-                  <option key={model} value={model}>{model}</option>
+                  <option key={model} value={model}>{getDisplayModelName(model)}</option>
                 ))}
               </select>
             </div>
@@ -314,7 +351,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
             {selectedModel && biographyData[selectedModel] && (
               <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/60 p-6 sm:p-8 shadow-xl ring-1 ring-slate-900/5">
                 <h5 className="text-xl sm:text-2xl font-bold text-slate-800 mb-4 sm:mb-6">
-                  {selectedModel} - {biographyType} Biography
+                  {getDisplayModelName(selectedModel)} - {biographyType} Biography
                 </h5>
                 <div className="prose prose-slate max-w-none">
                   <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-base sm:text-lg">
@@ -335,7 +372,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
               <h4 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-3 sm:mb-4 tracking-tight">Rate This Model</h4>
               <div className="w-12 sm:w-14 lg:w-16 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full mb-3 sm:mb-4"></div>
               <p className="text-slate-700 text-base sm:text-lg lg:text-xl font-medium leading-relaxed">
-                Rate <span className="font-bold text-blue-600">{selectedModel}</span>'s accuracy about <span className="font-bold text-blue-600">{selectedScientist.name}</span>'s affiliation, research, and gender
+                Rate <span className="font-bold text-blue-600">{getDisplayModelName(selectedModel)}</span>'s accuracy about <span className="font-bold text-blue-600">{selectedScientist.name}</span>'s affiliation, research, and gender
               </p>
             </div>
             <button
@@ -384,7 +421,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
                 }}
                 className="w-full p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-all duration-200 text-sm sm:text-base"
                 rows={6}
-                placeholder={`Share your thoughts about ${selectedModel}'s accuracy for ${selectedScientist.name}...`}
+                placeholder={`Share your thoughts about ${getDisplayModelName(selectedModel)}'s accuracy for ${selectedScientist.name}...`}
               />
             </div>
           </div>
