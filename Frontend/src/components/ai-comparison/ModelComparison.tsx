@@ -112,7 +112,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
 
 
 
-  const ratingCategories: Array<RatingCategory['category']> = ['affiliation', 'research', 'gender', 'supervision'];
+  const ratingCategories: Array<RatingCategory['category']> = ['affiliation', 'research', 'gender'];
 
   const handleRatingChange = (modelKey: string, category: RatingCategory['category'], score: number) => {
     setRatings(prev => ({
@@ -127,7 +127,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
 
   const saveRating = async (modelKey: string) => {
     const modelRatings = ratings[modelKey] || [];
-    if (modelRatings.length === 4 && selectedScientist && biographyData) { // Now 4 categories: affiliation, research, gender, supervision
+    if (modelRatings.length === 3 && selectedScientist && biographyData) { // 3 categories: affiliation, research, gender
       const rating: ModelRating = {
         id: crypto.randomUUID(),
         model: modelKey as AIModel,
@@ -215,7 +215,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
           </div>
           <div className="text-slate-700 text-base sm:text-lg leading-relaxed">
             <p className="mb-3">
-              <strong>Important:</strong> Evaluate AI model biographies for accuracy. PhD supervision refers specifically to <strong>doctoral advisor relationships</strong>.
+              <strong>Important:</strong> Evaluate AI model biographies for accuracy in affiliation, research focus, and gender identification.
             </p>
             <p className="mb-3">
               <strong>Rating Options:</strong>
@@ -225,7 +225,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
               <li><strong>Partially Correct:</strong> Information is mostly accurate but missing some details</li>
               <li><strong>Incorrect:</strong> Information is wrong or misleading</li>
               <li><strong>Not Applicable:</strong> Category doesn't apply to this person</li>
-              <li><strong>IDK:</strong> You don't know if the information is correct</li>
+              <li><strong>I Don't Know:</strong> You don't know if the information is correct</li>
             </ul>
             <p className="mb-3">
               <strong>Research Guidelines:</strong> If you need to verify information, you can use <strong>Google</strong> to search for university websites, publications, and academic records.
@@ -315,9 +315,9 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
                     {getDisplayModelName(model)}
                   </h5>
                   
-                  <div className="grid gap-6 lg:grid-cols-3 mb-8">
+                  <div className="mb-8">
                     {/* Combined Biography */}
-                    <div className="lg:col-span-2 bg-gradient-to-br from-slate-50/80 to-blue-50/40 backdrop-blur-sm rounded-2xl border border-slate-200/40 p-6 shadow-lg">
+                    <div className="bg-gradient-to-br from-slate-50/80 to-blue-50/40 backdrop-blur-sm rounded-2xl border border-slate-200/40 p-6 shadow-lg">
                       <h6 className="text-lg sm:text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
                         <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                         Biography Content
@@ -345,70 +345,6 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
                         )}
                       </div>
                     </div>
-
-                    {/* Supervision Questions */}
-                    <div className="bg-gradient-to-br from-emerald-50/80 to-blue-50/40 backdrop-blur-sm rounded-2xl border border-emerald-200/40 p-6 shadow-lg">
-                      <h6 className="text-lg sm:text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                        PhD Supervision
-                      </h6>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-bold text-slate-800 mb-2">
-                            Supervisors
-                          </label>
-                          <textarea
-                            value={(() => {
-                              const key = `${modelKey}_supervisors`;
-                              return notes[key] || '';
-                            })()}
-                            onChange={(e) => {
-                              const key = `${modelKey}_supervisors`;
-                              handleNotesChange(key, e.target.value);
-                            }}
-                            className="w-full p-3 bg-white/80 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none transition-all duration-200 text-xs"
-                            rows={3}
-                            placeholder="Who was the supervisor for this person? Leave empty if not found."
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-bold text-slate-800 mb-2">
-                            Supervised
-                          </label>
-                          <textarea
-                            value={(() => {
-                              const key = `${modelKey}_supervised`;
-                              return notes[key] || '';
-                            })()}
-                            onChange={(e) => {
-                              const key = `${modelKey}_supervised`;
-                              handleNotesChange(key, e.target.value);
-                            }}
-                            className="w-full p-3 bg-white/80 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none transition-all duration-200 text-xs"
-                            rows={3}
-                            placeholder="Who did this person supervise? Leave empty if not found."
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-bold text-slate-800 mb-2">
-                            Source URL (Optional)
-                          </label>
-                          <input
-                            type="url"
-                            value={(() => {
-                              const key = `${modelKey}_source_url`;
-                              return notes[key] || '';
-                            })()}
-                            onChange={(e) => {
-                              const key = `${modelKey}_source_url`;
-                              handleNotesChange(key, e.target.value);
-                            }}
-                            className="w-full p-2 bg-white/80 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-xs"
-                            placeholder="https://source-url.com"
-                          />
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
                   {/* Rating Section for this Model */}
@@ -419,14 +355,14 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
                       </h6>
                       <button
                         onClick={() => saveRating(modelKey)}
-                        disabled={(ratings[modelKey]?.length || 0) !== 4}
+                        disabled={(ratings[modelKey]?.length || 0) !== 3}
                         className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl text-base sm:text-lg font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] w-full lg:w-auto"
                       >
                         Save Rating for {getDisplayModelName(model)}
                       </button>
                     </div>
 
-                    <div className="grid gap-6 lg:grid-cols-2">
+                    <div className="space-y-6">
                       <div className="space-y-6">
                         {ratingCategories.map((category) => (
                           <RatingScale
@@ -444,7 +380,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
                           value={notes[modelKey] || ''}
                           onChange={(e) => handleNotesChange(modelKey, e.target.value)}
                           className="w-full p-4 bg-white/80 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none transition-all duration-200 text-sm sm:text-base"
-                          rows={6}
+                          rows={4}
                           placeholder={`Share your thoughts about ${getDisplayModelName(model)}'s accuracy for ${selectedScientist.name}...`}
                         />
                       </div>

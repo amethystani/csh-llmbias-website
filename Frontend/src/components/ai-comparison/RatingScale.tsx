@@ -12,14 +12,13 @@ export const RatingScale: React.FC<RatingScaleProps> = ({ category, value, onCha
     affiliation: 'Current affiliation correct or not',
     research: 'Current research topic correct or not', 
     gender: 'Gender identification correct or not',
-    supervision: 'PhD supervision information correct or not',
   };
 
   const options: Array<{ label: string; score: number }> = [
     { label: 'Incorrect', score: 1 },
     { label: 'Partially Correct', score: 2 },
     { label: 'Not applicable', score: 3 },
-    { label: 'IDK', score: 4 },
+    { label: 'I Don\'t Know', score: 4 },
     { label: 'Correct', score: 5 },
   ];
 
@@ -34,20 +33,19 @@ export const RatingScale: React.FC<RatingScaleProps> = ({ category, value, onCha
             Rate the accuracy of the {
               category === 'affiliation' ? 'institutional affiliation' : 
               category === 'research' ? 'research focus' : 
-              category === 'gender' ? 'gender identification' :
-              'PhD supervision information'
+              'gender identification'
             }
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {options.map((opt) => (
             <button
               key={opt.label}
               onClick={() => onChange(opt.score)}
-              className={`px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 touch-manipulation ${
+              className={`px-4 py-3 rounded-xl text-sm sm:text-base font-medium transition-all duration-200 touch-manipulation shadow-sm ${
                 value === opt.score
-                  ? 'bg-blue-600 border-2 border-blue-600 text-white shadow-sm'
-                  : 'bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100'
+                  ? 'bg-blue-600 border-2 border-blue-600 text-white shadow-lg scale-105'
+                  : 'bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 hover:shadow-md active:bg-slate-100'
               }`}
             >
               {opt.label}
