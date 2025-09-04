@@ -1,8 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AIModel, ModelRating, RatingCategory, Scientist, ModelBiographyMap } from '../../types/ai-comparison';
 import { RatingScale } from './RatingScale';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, ChevronRight, Play, Save } from 'lucide-react';
 import API_ENDPOINTS from '../../config/api';
+
+type AssessmentPhase = 'minimal' | 'comprehensive';
+
+interface AssessmentData {
+  id: string;
+  scientist_name: string;
+  phase: AssessmentPhase;
+  model_ratings: Record<string, RatingCategory[]>;
+  model_notes: Record<string, string>;
+  timestamp: string;
+}
 
 interface ModelComparisonProps {
   onAddRating: (rating: ModelRating) => void;
@@ -10,35 +21,50 @@ interface ModelComparisonProps {
 
 export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating }) => {
   const [scientists, setScientists] = useState<Scientist[]>([]);
-  const [selectedScientist, setSelectedScientist] = useState<Scientist | null>(null);
-  const [biographyData, setBiographyData] = useState<ModelBiographyMap | null>(null);
   const [availableModels, setAvailableModels] = useState<string[]>([]);
+  
+  // Assessment flow state
+  const [assessmentStarted, setAssessmentStarted] = useState(false);
+  const [currentPhase, setCurrentPhase] = useState<AssessmentPhase>('minimal');
+  const [assessmentData, setAssessmentData] = useState<Record<string, AssessmentData>>({});
+  const [isSavingAll, setIsSavingAll] = useState(false);
+  const [saveAllStatus, setSaveAllStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  
+  // Current assessment state
+  const [ratings, setRatings] = useState<Record<string, RatingCategory[]>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  
   const scientistSelectionRef = useRef<HTMLDivElement>(null);
 
-  // Simple model anonymization with initials for unbiased research
+  // Model anonymization mapping for unbiased assessment
+  // INTERNAL MAPPING REFERENCE (DO NOT SHOW TO USERS):
+  // Bio 1 = deepseek models, Bio 2 = gpt/davinci models, Bio 3 = qwen models
+  // Bio 4 = gemma models, Bio 5 = claude models, Bio 6 = gemini/bard models
+  // Bio 7 = llama models, Bio 8 = mistral/mixtral models, Bio 9 = cohere models
+  // Bio 10 = palm models, Bio 11 = yi models, Bio 12+ = other models
   const getAnonymizedModelName = (modelName: string): string => {
-    // Create a simple mapping based on model keywords
-    const getInitial = (name: string): string => {
+    // Create a consistent numerical mapping based on model keywords
+    const getModelNumber = (name: string): number => {
       const lowerName = name.toLowerCase();
       
-      // Check for specific model patterns and assign consistent initials
-      if (lowerName.includes('deepseek')) return 'D';
-      if (lowerName.includes('gpt') || lowerName.includes('davinci')) return 'G';
-      if (lowerName.includes('qwen')) return 'Q';
-      if (lowerName.includes('gemma')) return 'M';
-      if (lowerName.includes('claude')) return 'C';
-      if (lowerName.includes('gemini') || lowerName.includes('bard')) return 'E';
-      if (lowerName.includes('llama')) return 'L';
-      if (lowerName.includes('mistral') || lowerName.includes('mixtral')) return 'X';
-      if (lowerName.includes('cohere')) return 'H';
-      if (lowerName.includes('palm')) return 'P';
-      if (lowerName.includes('yi-')) return 'Y';
+      // Assign consistent numbers for model families
+      if (lowerName.includes('deepseek')) return 1;
+      if (lowerName.includes('gpt') || lowerName.includes('davinci')) return 2;
+      if (lowerName.includes('qwen')) return 3;
+      if (lowerName.includes('gemma')) return 4;
+      if (lowerName.includes('claude')) return 5;
+      if (lowerName.includes('gemini') || lowerName.includes('bard')) return 6;
+      if (lowerName.includes('llama')) return 7;
+      if (lowerName.includes('mistral') || lowerName.includes('mixtral')) return 8;
+      if (lowerName.includes('cohere')) return 9;
+      if (lowerName.includes('palm')) return 10;
+      if (lowerName.includes('yi-')) return 11;
       
-      // For unknown models, use first letter of the name
-      return name.charAt(0).toUpperCase();
+      // For unknown models, generate a consistent number based on first letter
+      return 12 + name.charCodeAt(0) % 10;
     };
     
-    return `Bio-${getInitial(modelName)}`;
+    return `Bio ${getModelNumber(modelName)}`;
   };
 
   // Get display name for dropdown 
@@ -83,103 +109,191 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
   }, []);
 
 
-  // Load biography when scientist is selected
+  // Load all scientist biographies when assessment starts
+  const [allBiographyData, setAllBiographyData] = useState<Record<string, ModelBiographyMap>>({});
+  
   useEffect(() => {
-    const loadBiography = async () => {
-      if (!selectedScientist) {
-        setBiographyData(null);
+    const loadAllBiographies = async () => {
+      if (!assessmentStarted) {
+        setAllBiographyData({});
         return;
       }
       
-      try {
-        const response = await fetch(API_ENDPOINTS.biography(selectedScientist.name));
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.biography) {
-            setBiographyData(data.biography); // This now contains all models for the scientist
+      const biographiesData: Record<string, ModelBiographyMap> = {};
+      
+      for (const scientist of scientists) {
+        try {
+          const response = await fetch(API_ENDPOINTS.biography(scientist.name));
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.biography) {
+              biographiesData[scientist.name] = data.biography;
+            }
           }
+        } catch (error) {
+          console.error(`Failed to load biography for ${scientist.name}:`, error);
         }
-      } catch (error) {
-        console.error('Failed to load biography:', error);
       }
+      
+      setAllBiographyData(biographiesData);
     };
     
-    loadBiography();
-  }, [selectedScientist]);
+    loadAllBiographies();
+  }, [assessmentStarted, scientists]);
 
-  const [ratings, setRatings] = useState<Record<string, RatingCategory[]>>({});
-  const [notes, setNotes] = useState<Record<string, string>>({});
-
+  // Assessment flow helper variables (removed unused variables for cleaner code)
 
 
   const ratingCategories: Array<RatingCategory['category']> = ['affiliation', 'research', 'gender'];
 
-  const handleRatingChange = (modelKey: string, category: RatingCategory['category'], score: number) => {
+  const handleRatingChange = (scientistName: string, modelKey: string, category: RatingCategory['category'], score: number) => {
+    const fullKey = `${scientistName}_${modelKey}`;
     setRatings(prev => ({
       ...prev,
-      [modelKey]: (prev[modelKey] || []).filter(r => r.category !== category).concat({ category, score })
+      [fullKey]: (prev[fullKey] || []).filter(r => r.category !== category).concat({ category, score })
     }));
   };
 
-  const handleNotesChange = (modelKey: string, note: string) => {
-    setNotes(prev => ({ ...prev, [modelKey]: note }));
+  const handleNotesChange = (scientistName: string, modelKey: string, note: string) => {
+    const fullKey = `${scientistName}_${modelKey}`;
+    setNotes(prev => ({ ...prev, [fullKey]: note }));
   };
 
-  const saveRating = async (modelKey: string) => {
-    const modelRatings = ratings[modelKey] || [];
-    if (modelRatings.length === 3 && selectedScientist && biographyData) { // 3 categories: affiliation, research, gender
-      const rating: ModelRating = {
-        id: crypto.randomUUID(),
-        model: modelKey as AIModel,
-        technique: 'zero-shot',
-        prompt: `${selectedScientist.name} biography assessment`,
-        response: `Response for ${modelKey}`,
-        ratings: modelRatings,
-        timestamp: new Date().toISOString(),
-        notes: notes[modelKey] || undefined,
-      };
+  // Assessment flow functions
+  const startAssessment = () => {
+    setAssessmentStarted(true);
+    setCurrentPhase('minimal');
+    setTimeout(() => {
+      scientistSelectionRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }, 100);
+  };
 
-      try {
-        // Save to backend
-        const response = await fetch(API_ENDPOINTS.ratings, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...rating,
-            scientist_name: selectedScientist.name
-          }),
-        });
+  const switchToComprehensivePhase = () => {
+    setCurrentPhase('comprehensive');
+    // Clear ratings and notes for comprehensive phase
+    setRatings({});
+    setNotes({});
+    setTimeout(() => {
+      scientistSelectionRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }, 100);
+  };
 
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            console.log('Rating saved successfully to backend:', result);
-            
-            // Also save to local state
-            onAddRating(rating);
-            
-            // Reset for this model
-            setRatings(prev => ({ ...prev, [modelKey]: [] }));
-            setNotes(prev => ({ ...prev, [modelKey]: '' }));
-            
-            // Show success message
-            // Success feedback without popup - could add a toast notification here
-          } else {
-            console.error('Failed to save rating:', result.error);
-            console.error('Failed to save rating:', result.error);
-          }
-        } else {
-          console.error('HTTP error when saving rating:', response.status);
-          console.error('Failed to save rating: Server error');
+  const saveCurrentPhaseAssessments = () => {
+    const newAssessmentData = { ...assessmentData };
+    
+    scientists.forEach(scientist => {
+      const scientistRatings: Record<string, RatingCategory[]> = {};
+      const scientistNotes: Record<string, string> = {};
+      
+      // Collect ratings and notes for this scientist
+      availableModels.forEach(model => {
+        const modelKey = model.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const fullKey = `${scientist.name}_${modelKey}`;
+        
+        if (ratings[fullKey] && ratings[fullKey].length === 3) {
+          scientistRatings[modelKey] = ratings[fullKey];
+          scientistNotes[modelKey] = notes[fullKey] || '';
         }
-      } catch (error) {
-        console.error('Error saving rating to backend:', error);
-        console.error('Failed to save rating: Network error');
+      });
+      
+      // Only create assessment if scientist has ratings
+      if (Object.keys(scientistRatings).length > 0) {
+        const assessmentKey = `${scientist.name}_${currentPhase}`;
+        newAssessmentData[assessmentKey] = {
+          id: crypto.randomUUID(),
+          scientist_name: scientist.name,
+          phase: currentPhase,
+          model_ratings: scientistRatings,
+          model_notes: scientistNotes,
+          timestamp: new Date().toISOString()
+        };
       }
+    });
+    
+    setAssessmentData(newAssessmentData);
+  };
+
+  const saveAllAssessments = async () => {
+    setIsSavingAll(true);
+    setSaveAllStatus('saving');
+    
+    try {
+      const assessmentsToSave = Object.values(assessmentData);
+      let successCount = 0;
+      
+      for (const assessment of assessmentsToSave) {
+        // Convert to individual model ratings for backend
+        for (const [modelKey, modelRatings] of Object.entries(assessment.model_ratings)) {
+          if (modelRatings.length === 3) {
+            const rating: ModelRating = {
+              id: crypto.randomUUID(),
+              model: modelKey as AIModel,
+              technique: 'zero-shot',
+              prompt: `${assessment.scientist_name} ${assessment.phase} biography assessment`,
+              response: `Response for ${modelKey}`,
+              ratings: modelRatings,
+              timestamp: assessment.timestamp,
+              notes: assessment.model_notes[modelKey] || undefined,
+            };
+
+            const response = await fetch(API_ENDPOINTS.ratings, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                scientist: assessment.scientist_name,
+                model: modelKey,
+                ratings: modelRatings,
+                notes: assessment.model_notes[modelKey],
+                phase: assessment.phase
+              }),
+            });
+
+            if (response.ok) {
+              successCount++;
+              onAddRating(rating);
+            }
+          }
+        }
+      }
+      
+      setSaveAllStatus('success');
+      setTimeout(() => {
+        setAssessmentStarted(false);
+        setCurrentPhase('minimal');
+        setAssessmentData({});
+        setSaveAllStatus('idle');
+      }, 3000);
+    } catch (error) {
+      console.error('Error saving all assessments:', error);
+      setSaveAllStatus('error');
+      setTimeout(() => setSaveAllStatus('idle'), 5000);
+    } finally {
+      setIsSavingAll(false);
     }
   };
+
+  const canProceedToNextPhase = () => {
+    // Check if at least one scientist has all models rated (3 categories each)
+    return scientists.some(scientist => {
+      return availableModels.every(model => {
+        const modelKey = model.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const fullKey = `${scientist.name}_${modelKey}`;
+        return (ratings[fullKey]?.length || 0) === 3;
+      });
+    });
+  };
+
+  // Removed canSaveAll function as it's no longer needed
+
+  // Individual saveRating function removed - now using batch save at the end of assessment
 
   return (
     <div className="space-y-10">
@@ -191,7 +305,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
           </h3>
           <div className="w-12 sm:w-14 lg:w-16 h-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full mb-3 sm:mb-4"></div>
           <p className="text-lg sm:text-xl lg:text-xl text-slate-700 font-medium leading-relaxed mb-4 sm:mb-6">
-            Select a scientist to evaluate how different AI models describe their biography
+            Evaluate AI model biographies
           </p>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
             <div className="bg-gradient-to-br from-white/80 to-blue-50/60 backdrop-blur-sm rounded-2xl px-4 sm:px-6 py-3 sm:py-4 border border-blue-200/40 shadow-lg">
@@ -228,7 +342,7 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
               <li><strong>I Don't Know:</strong> You don't know if the information is correct</li>
             </ul>
             <p className="mb-3">
-              <strong>Research Guidelines:</strong> If you need to verify information, you can use <strong>Google</strong> to search for university websites, publications, and academic records.
+              <strong>Research Guidelines:</strong> If you need to verify information, you can use verified sources like <strong>Wikipedia</strong> to search for university websites, publications, and academic records.
             </p>
             <p className="text-sm text-slate-600 italic">
               Remember to provide source URLs when available to support your assessments.
@@ -236,159 +350,255 @@ export const ModelComparison: React.FC<ModelComparisonProps> = ({ onAddRating })
           </div>
         </div>
 
-        {/* Scientists List */}
-        <div className="space-y-6 sm:space-y-8">
-          <div className="bg-gradient-to-r from-white/80 to-blue-50/60 backdrop-blur-sm rounded-2xl px-6 sm:px-8 py-3 sm:py-4 border border-blue-200/40 inline-block shadow-lg">
-            <h4 className="font-bold text-slate-800 text-lg sm:text-xl">All Scientists ({scientists.length})</h4>
-          </div>
-          {scientists.length > 0 ? (
-            <div className="grid gap-4 sm:gap-6 max-h-96 sm:max-h-[500px] overflow-y-auto">
-              {scientists.map((scientist) => (
-                <button
-                  key={scientist.name}
-                  onClick={() => {
-                    setSelectedScientist(scientist);
-                    // Scroll to scientist selection section after a brief delay
-                    setTimeout(() => {
-                      scientistSelectionRef.current?.scrollIntoView({ 
-                        behavior: 'smooth',
-                        block: 'start'
-                      });
-                    }, 100);
-                  }}
-                  className="text-left p-6 sm:p-8 bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl hover:bg-white/95 hover:border-blue-300 hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.02] ring-1 ring-slate-900/5 hover:ring-blue-500/20"
-                >
-                  <div className="flex items-center space-x-4 sm:space-x-6">
-                    <div className="bg-gradient-to-br from-blue-100 to-blue-200/60 backdrop-blur-sm rounded-2xl p-3 sm:p-4 shadow-md">
-                      <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900 text-lg sm:text-xl mb-1">{scientist.name}</p>
-                      <p className="text-slate-700 font-medium text-base sm:text-lg">{scientist.type}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 sm:py-16 bg-gradient-to-br from-white/60 to-slate-50/40 backdrop-blur-sm rounded-2xl border border-white/50 shadow-lg">
-              <p className="text-slate-600 text-lg sm:text-xl font-medium">No scientists available. Loading...</p>
-            </div>
-          )}
-        </div>
-
-        {/* Selected Scientist Display */}
-        {selectedScientist && biographyData && (
-          <div ref={scientistSelectionRef} className="space-y-8">
-            <div className="bg-gradient-to-br from-blue-50/80 to-emerald-50/40 backdrop-blur-xl rounded-2xl border border-blue-200/40 p-6 sm:p-8 shadow-xl ring-1 ring-slate-900/5">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
-                <div className="flex items-center">
-                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-3 sm:p-4 mr-4 sm:mr-6 shadow-lg">
-                    <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                  </div>
-                  <div>
-                    <h4 className="text-xl sm:text-2xl font-bold text-slate-900 mb-1">{selectedScientist.name}</h4>
-                    <p className="text-base sm:text-lg text-slate-600 font-medium">All Model Biographies</p>
-                  </div>
+        {!assessmentStarted ? (
+          <div className="text-center space-y-6 sm:space-y-8">
+            <div className="bg-gradient-to-br from-white/60 to-blue-50/40 backdrop-blur-sm rounded-3xl border border-blue-200/40 p-8 sm:p-12 shadow-xl">
+              <div className="flex flex-col items-center gap-6">
+                <div className="bg-gradient-to-br from-blue-100 to-blue-200/60 backdrop-blur-sm rounded-3xl p-6 shadow-lg">
+                  <GraduationCap className="w-16 h-16 sm:w-20 sm:h-20 text-blue-600" />
                 </div>
-                <button
-                  onClick={() => {
-                    setSelectedScientist(null);
-                    setBiographyData({});
-                  }}
-                  className="bg-white/90 hover:bg-white text-slate-700 hover:text-slate-900 px-6 sm:px-8 py-3 rounded-2xl border border-slate-200/60 font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transition-all duration-500 transform hover:scale-[1.02] ring-1 ring-slate-900/5 w-full sm:w-auto"
-                >
-                  Change Selection
-                </button>
+                <div className="text-center">
+                  <h3 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4">
+                    Biography Assessment ({scientists.length} Scientists)
+                  </h3>
+                  <p className="text-lg sm:text-xl text-slate-700 mb-6 max-w-3xl">
+                    Complete a comprehensive two-phase assessment of AI-generated biographies:
+                  </p>
+                  <div className="grid md:grid-cols-2 gap-6 mb-8 max-w-4xl">
+                    <div className="bg-white/80 rounded-2xl p-6 border border-blue-200/40 shadow-lg">
+                      <h4 className="text-xl font-bold text-blue-700 mb-3">Part 1: Minimal Biographies</h4>
+                      <p className="text-slate-600">Assess shorter, essential biographical information for all scientists</p>
+                    </div>
+                    <div className="bg-white/80 rounded-2xl p-6 border border-emerald-200/40 shadow-lg">
+                      <h4 className="text-xl font-bold text-emerald-700 mb-3">Part 2: Comprehensive Biographies</h4>
+                      <p className="text-slate-600">Evaluate detailed, comprehensive biographical content for all scientists</p>
+                    </div>
+                  </div>
+                  {scientists.length > 0 ? (
+                    <button
+                      onClick={startAssessment}
+                      className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-4 rounded-2xl text-lg sm:text-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                    >
+                      <Play className="w-6 h-6" />
+                      Start Assessment
+                    </button>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-slate-600 text-lg font-medium">No scientists available. Loading...</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Phase Controls
+          <div className="space-y-6">
+            {/* Phase Header and Controls */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/60 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-xl font-bold text-slate-800">
+                  {currentPhase === 'minimal' ? 'Part 1: Minimal Biographies' : 'Part 2: Comprehensive Biographies'}
+                </h4>
+                <div className="flex items-center gap-4">
+                  {/* Buttons moved to bottom after all scientists */}
+                </div>
+              </div>
+              <div className="text-sm text-slate-600">
+                {currentPhase === 'minimal' 
+                  ? 'Rate the minimal biographies for all scientists below. Complete at least one scientist to proceed to comprehensive phase.'
+                  : 'Rate the comprehensive biographies for all scientists below. Complete your assessments and save when finished.'
+                }
               </div>
             </div>
 
-            {/* All Model Biographies with Integrated Rating */}
-            {availableModels.map((model) => {
-              const modelData = biographyData[model];
-              if (!modelData) return null;
-              const modelKey = model.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            {/* Save All Status */}
+            {saveAllStatus !== 'idle' && (
+              <div className={`p-4 rounded-2xl text-center font-semibold text-lg transition-all duration-500 ${
+                saveAllStatus === 'saving' ? 'bg-blue-100 text-blue-800' :
+                saveAllStatus === 'success' ? 'bg-emerald-100 text-emerald-800' :
+                'bg-red-100 text-red-800'
+              }`}>
+                {saveAllStatus === 'saving' && (
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                    Saving all assessments...
+                  </div>
+                )}
+                {saveAllStatus === 'success' && (
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="w-5 h-5 bg-emerald-600 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                    All assessments saved successfully! Resetting...
+                  </div>
+                )}
+                {saveAllStatus === 'error' && (
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="w-5 h-5 bg-red-600 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">✕</span>
+                    </div>
+                    Failed to save some assessments. Please try again.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* All Scientists Assessment Display */}
+        {assessmentStarted && (
+          <div ref={scientistSelectionRef} className="space-y-8">
+            {/* Exit Button */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => setAssessmentStarted(false)}
+                className="bg-white/90 hover:bg-white text-slate-700 hover:text-slate-900 px-6 py-3 rounded-2xl border border-slate-200/60 font-bold text-base shadow-lg hover:shadow-xl transition-all duration-500 transform hover:scale-[1.02] ring-1 ring-slate-900/5"
+              >
+                Exit Assessment
+              </button>
+            </div>
+
+            {/* All Scientists Biographies */}
+            {scientists.map((scientist) => {
+              const scientistBiographyData = allBiographyData[scientist.name];
+              if (!scientistBiographyData) return null;
 
               return (
-                <div key={model} className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/60 p-6 sm:p-8 shadow-xl ring-1 ring-slate-900/5">
-                  <h5 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-6 sm:mb-8 text-center">
-                    {getDisplayModelName(model)}
-                  </h5>
-                  
-                  <div className="mb-8">
-                    {/* Combined Biography */}
-                    <div className="bg-gradient-to-br from-slate-50/80 to-blue-50/40 backdrop-blur-sm rounded-2xl border border-slate-200/40 p-6 shadow-lg">
-                      <h6 className="text-lg sm:text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                        Biography Content
-                      </h6>
-                      <div className="space-y-4">
-                        {modelData.minimal_biography && (
-                          <div>
-                            <div className="text-sm font-semibold text-slate-600 mb-2">Minimal Version:</div>
-                            <div className="prose prose-slate max-w-none">
-                              <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm">
-                                {modelData.minimal_biography}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        {modelData.comprehensive_biography && (
-                          <div>
-                            <div className="text-sm font-semibold text-slate-600 mb-2">Comprehensive Version:</div>
-                            <div className="prose prose-slate max-w-none">
-                              <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-sm">
-                                {modelData.comprehensive_biography}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                <div key={scientist.name} className="bg-gradient-to-br from-blue-50/80 to-emerald-50/40 backdrop-blur-xl rounded-3xl border border-blue-200/40 p-8 sm:p-12 shadow-xl ring-1 ring-slate-900/5">
+                  {/* Scientist Header */}
+                  <div className="flex items-center mb-10">
+                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl p-6 mr-8 shadow-lg">
+                      <GraduationCap className="w-10 h-10 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">{scientist.name}</h3>
+                      <p className="text-xl text-slate-600 font-medium">
+                        {currentPhase === 'minimal' ? 'Minimal Biography Assessment' : 'Comprehensive Biography Assessment'}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Rating Section for this Model */}
-                  <div className="bg-gradient-to-br from-emerald-50/60 to-blue-50/40 backdrop-blur-sm rounded-2xl border border-emerald-200/40 p-6 shadow-lg">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6 mb-6">
-                      <h6 className="text-xl sm:text-2xl font-bold text-slate-900">
-                        Rating Categories
-                      </h6>
-                      <button
-                        onClick={() => saveRating(modelKey)}
-                        disabled={(ratings[modelKey]?.length || 0) !== 3}
-                        className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl text-base sm:text-lg font-bold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] w-full lg:w-auto"
-                      >
-                        Save Rating for {getDisplayModelName(model)}
-                      </button>
-                    </div>
+                  {/* All Models for this Scientist */}
+                  <div className="grid gap-10">
+                    {availableModels.map((model) => {
+                      const modelData = scientistBiographyData[model];
+                      if (!modelData) return null;
+                      const modelKey = model.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                      const fullKey = `${scientist.name}_${modelKey}`;
 
-                    <div className="space-y-6">
-                      <div className="space-y-6">
-                        {ratingCategories.map((category) => (
-                          <RatingScale
-                            key={`${model}-${category}`}
-                            category={category}
-                            value={ratings[modelKey]?.find(r => r.category === category)?.score || 0}
-                            onChange={(score) => handleRatingChange(modelKey, category, score)}
-                          />
-                        ))}
-                      </div>
+                      return (
+                        <div key={model} className="bg-white/90 backdrop-blur-xl rounded-2xl border border-white/60 p-8 shadow-lg">
+                          <h5 className="text-xl sm:text-2xl font-bold text-slate-900 mb-8 text-center">
+                            {getDisplayModelName(model)}
+                          </h5>
+                          
+                          <div className="space-y-8">
+                            {/* Biography Content */}
+                            <div className="bg-gradient-to-br from-slate-50/80 to-blue-50/40 backdrop-blur-sm rounded-2xl border border-slate-200/40 p-8 shadow-sm">
+                              <h6 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${currentPhase === 'minimal' ? 'bg-blue-500' : 'bg-emerald-500'}`}></div>
+                                {currentPhase === 'minimal' ? 'Minimal Biography' : 'Comprehensive Biography'}
+                              </h6>
+                              <div className="prose prose-slate max-w-none">
+                                <p className="text-slate-700 leading-relaxed whitespace-pre-wrap text-base">
+                                  {currentPhase === 'minimal' ? modelData.minimal_biography : modelData.comprehensive_biography}
+                                </p>
+                              </div>
+                            </div>
 
-                      <div>
-                        <label className="block text-lg font-bold text-slate-800 mb-3">Additional Notes</label>
-                        <textarea
-                          value={notes[modelKey] || ''}
-                          onChange={(e) => handleNotesChange(modelKey, e.target.value)}
-                          className="w-full p-4 bg-white/80 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none transition-all duration-200 text-sm sm:text-base"
-                          rows={4}
-                          placeholder={`Share your thoughts about ${getDisplayModelName(model)}'s accuracy for ${selectedScientist.name}...`}
-                        />
-                      </div>
-                    </div>
+                            {/* Rating Section */}
+                            <div className="bg-gradient-to-br from-emerald-50/60 to-blue-50/40 backdrop-blur-sm rounded-2xl border border-emerald-200/40 p-8 shadow-sm">
+                              <div className="flex items-center justify-between mb-6">
+                                <h6 className="text-lg font-bold text-slate-900">
+                                  Rating Categories
+                                </h6>
+                                <div className="text-sm text-slate-600 bg-white/80 px-4 py-2 rounded-lg border">
+                                  {(ratings[fullKey]?.length || 0)}/3
+                                </div>
+                              </div>
+
+                              <div className="space-y-6">
+                                {ratingCategories.map((category) => (
+                                  <RatingScale
+                                    key={`${scientist.name}-${model}-${category}`}
+                                    category={category}
+                                    value={ratings[fullKey]?.find(r => r.category === category)?.score || 0}
+                                    onChange={(score) => handleRatingChange(scientist.name, modelKey, category, score)}
+                                  />
+                                ))}
+                              </div>
+
+                              <div className="mt-8">
+                                <label className="block text-base font-bold text-slate-800 mb-3">Notes</label>
+                                <textarea
+                                  value={notes[fullKey] || ''}
+                                  onChange={(e) => handleNotesChange(scientist.name, modelKey, e.target.value)}
+                                  className="w-full p-4 bg-white/80 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none transition-all duration-200 text-base"
+                                  rows={4}
+                                  placeholder={`Notes about ${getDisplayModelName(model)}'s accuracy...`}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
             })}
+
+            {/* Phase Transition and Submit Buttons - Moved to Bottom */}
+            <div className="flex justify-center mt-12 mb-8">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/60 shadow-lg">
+                {currentPhase === 'minimal' && (
+                  <div className="text-center space-y-4">
+                    <p className="text-lg font-medium text-slate-700 mb-6">
+                      Ready to proceed to comprehensive biographies?
+                    </p>
+                    <button
+                      onClick={() => {
+                        saveCurrentPhaseAssessments();
+                        switchToComprehensivePhase();
+                      }}
+                      disabled={!canProceedToNextPhase()}
+                      className={`flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 ${
+                        !canProceedToNextPhase()
+                          ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                      }`}
+                    >
+                      <ChevronRight className="w-6 h-6" />
+                      Start Comprehensive Phase
+                    </button>
+                  </div>
+                )}
+                
+                {currentPhase === 'comprehensive' && (
+                  <div className="text-center space-y-4">
+                    <p className="text-lg font-medium text-slate-700 mb-6">
+                      Complete your assessment by submitting all ratings
+                    </p>
+                    <button
+                      onClick={() => {
+                        saveCurrentPhaseAssessments();
+                        saveAllAssessments();
+                      }}
+                      disabled={isSavingAll || !canProceedToNextPhase()}
+                      className={`flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold text-lg transition-all duration-200 ${
+                        isSavingAll || !canProceedToNextPhase()
+                          ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                      }`}
+                    >
+                      <Save className="w-6 h-6" />
+                      {isSavingAll ? 'Saving Assessment...' : 'Submit Assessment'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

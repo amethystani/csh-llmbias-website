@@ -1,6 +1,26 @@
 #!/usr/bin/env python3
 """
 Genealogy Service - Backend API for reading Excel data and serving genealogy information
+
+MODEL ANONYMIZATION MAPPING (For Internal Reference Only):
+========================================================
+Frontend displays anonymized model names to reduce bias in assessments.
+The mapping is as follows:
+- Bio 1 = deepseek models
+- Bio 2 = gpt/davinci models  
+- Bio 3 = qwen models
+- Bio 4 = gemma models
+- Bio 5 = claude models
+- Bio 6 = gemini/bard models
+- Bio 7 = llama models
+- Bio 8 = mistral/mixtral models
+- Bio 9 = cohere models
+- Bio 10 = palm models
+- Bio 11 = yi models
+- Bio 12+ = other models (numbered based on first letter)
+
+This mapping ensures consistent anonymization across sessions while
+maintaining internal tracking capabilities for data analysis.
 """
 
 import pandas as pd
@@ -70,7 +90,8 @@ class GenealogyAssessment:
     person_name: str  # The scientist being assessed
     supervisors: str  # Names of supervisors (comma-separated or descriptive text)
     supervisees: str  # Names of supervisees (comma-separated or descriptive text)
-    source_url: Optional[str]  # URL source for the information
+    supervisors_source_url: Optional[str]  # URL source for supervisors information
+    supervisees_source_url: Optional[str]  # URL source for supervisees information
     timestamp: str
     notes: Optional[str] = None
 
@@ -491,7 +512,8 @@ class GenealogyService:
                 person_name=assessment_data['person_name'],
                 supervisors=assessment_data['supervisors'],
                 supervisees=assessment_data['supervisees'],
-                source_url=assessment_data.get('source_url'),
+                supervisors_source_url=assessment_data.get('supervisors_source_url'),
+                supervisees_source_url=assessment_data.get('supervisees_source_url'),
                 timestamp=assessment_data['timestamp'],
                 notes=assessment_data.get('notes')
             )
@@ -520,7 +542,8 @@ class GenealogyService:
                     'Person Name': assessment.person_name,
                     'Supervisors': assessment.supervisors,
                     'Supervisees': assessment.supervisees,
-                    'Source URL': assessment.source_url or '',
+                    'Supervisors Source URL': assessment.supervisors_source_url or '',
+                    'Supervisees Source URL': assessment.supervisees_source_url or '',
                     'Timestamp': assessment.timestamp,
                     'Notes': assessment.notes or ''
                 })
