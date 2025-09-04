@@ -15,7 +15,7 @@ export const TabNavigation: React.FC<TabNavigationProps> = ({
     {
       id: 'genealogy' as TabType,
       label: 'Genealogy Assessment',
-      description: 'Family research and supervision evaluation',
+      description: 'Genealogy Tree evaluation',
       icon: Users,
     },
     {

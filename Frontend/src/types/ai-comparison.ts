@@ -3,8 +3,8 @@ export type PromptTechnique = 'zero-shot' | 'few-shot' | 'chain-of-thought';
 export type AIModel = 'gpt-4' | 'claude' | 'gemini' | 'palm';
 
 export interface RatingCategory {
-  category: 'affiliation' | 'research' | 'gender';
-  score: number; // 1-5 mapping: Correct=5, N/A=3, Incorrect=1
+  category: 'affiliation' | 'research' | 'gender' | 'supervision';
+  score: number; // 1-5 mapping: Correct=5, IDK=4, N/A=3, Partially Correct=2, Incorrect=1
 }
 
 export interface ModelRating {
